@@ -3,13 +3,15 @@ Aliyun ACR (Container Registry) Prometheus Collector
 
 WARNING: Not ready for production!
 
-TODO
-----
-+ Collect cache
-+ ACR EE support
-+ More metrics
-+ More configuration
-+ etc
+USAGE
+-----
+```
+echo -n "ALIYUN_REGION=cn-hangzhou\nALIYUN_AK=ABC\nALIYUN_SK=DEF" > password
+
+kubectl create secret generic aliyun-cr-secret --from-file=password -n your_namespace
+
+kubectl apply -f ./k8s/ -n your_namespace
+```
 
 Metrics
 -------
@@ -32,3 +34,11 @@ Configuration
 | ALIYUN_AK     | Access Key              |
 | ALIYUN_SK     | Access Secret           |
 
+TODO
+----
++ Collect cache
++ ACR EE support
++ Multi tenent exporting
++ More metrics
++ More configuration
++ etc

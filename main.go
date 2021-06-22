@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -78,6 +79,26 @@ func main() {
 
 	// serve metrics
 	http.Handle("/metrics", promhttp.Handler())
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`<html>
+             <head><title>Aliyun ACR Exporter</title></head>
+             <body>
+             <h1>Aliyun ACR Exporter</h1>
+             <p><a href="/metrics">Metrics</a></p>
+             <h2>Build</h2>
+             </body>
+             </html>`))
+	})
+	http.HandleFunc("/-/healthy", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "OK")
+	})
+	http.HandleFunc("/-/ready", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "OK")
+	})
+
 	log.Fatal(http.ListenAndServe(":9101", nil))
 }
 

@@ -1,0 +1,84 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: aliyun-cr-exporter
+  labels:
+    app: aliyun-cr-exporter
+spec:
+  ports:
+    - name: http
+      port: 9101
+      protocol: TCP
+  selector:
+    app: aliyun-cr-exporter
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aliyun-cr-exporter
+  labels:
+    app: aliyun-cr-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aliyun-cr-exporter
+  template:
+    metadata:
+      labels:
+        app: aliyun-cr-exporter
+    spec:
+      containers:
+        - name: aliyun-cr-exporter
+          image: "registry.cn-hangzhou.aliyuncs.com/doji-public/aliyun-cr-exporter:0.1.0"
+          env:
+            - name: ALIYUN_REGION
+              value: cn-hangzhou # change to your region
+            - name: ALIYUN_AK
+                secretKeyRef:
+                  name: aliyun-cr-secret
+                  key: ALIYUN_AK
+            - name: ALIYUN_SK
+              valueFrom:
+                secretKeyRef:
+                  name: aliyun-cr-secret
+                  key: ALIYUN_SK
+          resources:
+            limits:
+              cpu: 400m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+          ports:
+            - containerPort: 9101
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aliyun-cr-exporter
+spec:
+  endpoints:
+  - interval: 1m
+    scrapeTimeout: 15s
+    honorLabels: true
+    port: http
+    path: /metrics
+    scheme: http
+  selector:
+    matchLabels:
+      app: aliyun-cr-exporter
+  namespaceSelector:
+    matchNames:
+    - devops # change to the namespace where you deployed aliyun-cr-exporter

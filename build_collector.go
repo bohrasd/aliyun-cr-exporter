@@ -8,6 +8,10 @@ import (
 )
 
 func (metric_map MetricMap) initBuildDisc() {
+	metric_map["aliyun_acr_build_total"] = prometheus.NewDesc(
+		"aliyun_acr_build_total",
+		"Aliyun ACR build total",
+		[]string{"repoName", "repoNamespace"}, nil)
 
 	metric_map["aliyun_acr_build_status"] = prometheus.NewDesc(
 		"aliyun_acr_build_status",
@@ -25,6 +29,15 @@ var buildStatusMap = map[string]float64{
 	"BUILDING": 2,
 	"CANCELED": 3,
 	"FAILED":   4,
+}
+
+func (metric_map MetricMap) collectBuildTotal(prom_ch chan<- prometheus.Metric, repo aliyun.Repo, total int) {
+
+	prom_ch <- prometheus.MustNewConstMetric(metric_map["aliyun_acr_build_total"], prometheus.GaugeValue,
+		float64(total),
+		repo.RepoName,
+		repo.RepoNamespace,
+	)
 }
 
 // latest several builds could be enough

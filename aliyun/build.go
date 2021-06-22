@@ -19,7 +19,7 @@ type Build struct {
 }
 
 // you wont need all of them right
-func (c_mutex *AliyunClientMutex) GetLastestBuilds(ns string, repo string) []Build {
+func (c_mutex *AliyunClientMutex) GetLastestBuilds(ns string, repo string) ([]Build, int) {
 	c_mutex.Mu.Lock()
 	defer c_mutex.Mu.Unlock()
 
@@ -33,9 +33,12 @@ func (c_mutex *AliyunClientMutex) GetLastestBuilds(ns string, repo string) []Bui
 	}
 
 	builds := struct {
-		Data struct{ Builds []Build }
+		Data struct {
+			Builds []Build
+			Total  int
+		}
 	}{}
 
 	json.Unmarshal(resp.GetHttpContentBytes(), &builds)
-	return builds.Data.Builds
+	return builds.Data.Builds, builds.Data.Total
 }

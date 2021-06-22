@@ -92,10 +92,9 @@ type AliyunExporter struct {
 
 func NewAliyunExporter() AliyunExporter {
 
-	ac := aliyun.NewAliyunClientMutex()
 	ae := AliyunExporter{
 
-		ac: &ac,
+		ac: aliyun.NewAliyunClientMutex(),
 
 		metric_map: MetricMap{
 			"aliyun_acr_namespace_info": prometheus.NewDesc("aliyun_acr_namespace_info", "Aliyun ACR Namespace",
@@ -140,7 +139,8 @@ func (exporter *AliyunExporter) Collect(prom_ch chan<- prometheus.Metric) {
 		for repo := range multi_chan[namespace.Namespace] {
 			if repo.RepoBuildType == "AUTO_BUILD" {
 
-				build := exporter.ac.GetLastestBuilds(namespace.Namespace, repo.RepoName)
+				build, total := exporter.ac.GetLastestBuilds(namespace.Namespace, repo.RepoName)
+				exporter.metric_map.collectBuildTotal(prom_ch, repo, total)
 				exporter.metric_map.collectBuildMetric(prom_ch, build)
 
 			}

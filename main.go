@@ -1,163 +1,151 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
+	"github.com/bohrasd/aliyun-cr-exporter/aliyun"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/cr"
 )
 
-type Namespaces struct {
-	Namespaces []Namespace
-}
-
-type Namespace struct {
-	NamespaceStatus string
-	Namespace       string
-	AuthorizeType   string
-}
-
-type Repos struct {
-	Total    int
-	Page     int
-	PageSize int
-	Repos    []Repo
-}
-
-type Repo struct {
-	Downloads         int64
-	GmtCreate         int64
-	GmtModified       int64
-	Logo              string
-	RegionId          string
-	RepoAuthorizeType string
-	RepoBuildType     string
-	RepoDomainList    struct {
-		Internal string
-		Public   string
-		Vpc      string
-	}
-	RepoId         int64
-	RepoName       string
-	RepoNamespace  string
-	RepoOriginType string
-	RepoStatus     string
-	RepoType       string
-	Stars          int64
-	Summary        string
-}
-
 func main() {
-
 	// declare metrics
-	namespacesGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "aliyun_acr_namespace_info",
-			Help: "Aliyun ACR Namespace",
-		},
-		[]string{"namespaceStatus", "namespace", "authorizeType"},
-	)
+	// namespacesGauge := prometheus.NewGaugeVec(
+	// prometheus.GaugeOpts{
+	// Name: "aliyun_acr_namespace_info",
+	// Help: "Aliyun ACR Namespace",
+	// },
+	// []string{"namespaceStatus", "namespace", "authorizeType"},
+	// )
 
-	reposGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "aliyun_acr_repo_info",
-			Help: "Aliyun ACR Repository",
-		},
-		[]string{ //"downloads", "gmtCreate", "gmtModified", "logo",
-			"regionId", "repoAuthorizeType", "repoBuildType", //"repoDomainList",
-			"repoId", "repoName", "repoNamespace", "repoStatus", "repoType", "summary"},
-	)
+	// repoDownloadsGauge := prometheus.NewGaugeVec(
+	// prometheus.GaugeOpts{
+	// Name: "aliyun_acr_repo_downloads",
+	// Help: "Aliyun ACR Repository Downloads",
+	// },
+	// []string{ //"downloads", "gmtCreate", "gmtModified", "logo",
+	// "regionId", "repoAuthorizeType", "repoBuildType", //"repoDomainList",
+	// "repoId", "repoName", "repoNamespace", "repoStatus", "repoType", "summary"},
+	// )
 
-	prometheus.MustRegister(namespacesGauge, reposGauge)
+	// prometheus.MustRegister(namespacesGauge, repoDownloadsGauge)
+	exporter := NewAliyunExporter()
+	prometheus.MustRegister(&exporter)
 
-	// collect metrics info
-	client, err := cr.NewClientWithAccessKey("cn-hangzhou", "ABC", "DEF")
-	if err != nil {
-		// Handle exceptions
-		panic(err)
-	}
+	// c_mutex := aliyun.NewAliyunClientMutex()
 
-	getNSResp, err := client.GetNamespaceList(cr.CreateGetNamespaceListRequest())
-	if err != nil {
-		// Handle exceptions
-		panic(err)
-	}
-	if getNSResp.GetHttpStatus() == 200 {
+	// namespaces := c_mutex.NamespacesList()
 
-		namespaces := struct{ Data Namespaces }{}
+	// for _, namespace := range namespaces {
 
-		json.Unmarshal(getNSResp.GetHttpContentBytes(), &namespaces)
+	//     namespacesGauge.With(prometheus.Labels{
+	//         "namespace":       namespace.Namespace,
+	//         "namespaceStatus": namespace.NamespaceStatus,
+	//         "authorizeType":   namespace.AuthorizeType,
+	//     }).Set(1)
 
-		for _, namespace := range namespaces.Data.Namespaces {
-			namespacesGauge.With(prometheus.Labels{
-				"namespace":       namespace.Namespace,
-				"namespaceStatus": namespace.NamespaceStatus,
-				"authorizeType":   namespace.AuthorizeType,
-			}).Set(1)
+	//     ch := make(chan aliyun.Repo, 100)
+	//     go c_mutex.ReposList(namespace, ch)
 
-			go func(namespace Namespace) {
-				repoListReq := cr.CreateGetRepoListByNamespaceRequest()
-				repoListReq.PathParams["RepoNamespace"] = namespace.Namespace
-				repoListResp, err := client.GetRepoListByNamespace(repoListReq)
-				if err != nil {
-					// Handle exceptions
-					panic(err)
-				}
+	//     go func(namespace aliyun.Namespace) {
+	//         for repo := range ch {
+	//             fmt.Println(repo)
 
-				repos := struct{ Data Repos }{}
-				json.Unmarshal(repoListResp.GetHttpContentBytes(), &repos)
+	//             repoDownloadsGauge.With(prometheus.Labels{
+	//                 // "downloads": repo.Downloads,
+	//                 // "gmtCreate": repo.GmtCreate,
+	//                 // "gmtModified": repo.GmtModified,
+	//                 // "logo": repo.Logo,
+	//                 "regionId":          repo.RegionId,
+	//                 "repoAuthorizeType": repo.RepoAuthorizeType,
+	//                 "repoBuildType":     repo.RepoBuildType,
+	//                 // "repoDomainList": repo.RepoDomainList,
+	//                 "repoId":        strconv.FormatInt(repo.RepoId, 10),
+	//                 "repoName":      repo.RepoName,
+	//                 "repoNamespace": repo.RepoNamespace,
+	//                 // "repoOriginType": repo.RepoOriginType,
+	//                 "repoStatus": repo.RepoStatus,
+	//                 "repoType":   repo.RepoType,
+	//                 // "stars": repo.Stars,
+	//                 "summary": repo.Summary,
+	//             }).Set(float64(repo.Downloads))
 
-				dt := repos.Data
-				maxPage := dt.Total/dt.PageSize + 1
-				for i := 2; i <= maxPage; i++ {
+	//         }
+	//     }(namespace)
 
-					repoListReq.Page = requests.NewInteger(i)
-					repoListResp, err = client.GetRepoListByNamespace(repoListReq)
-
-					if err != nil {
-						// Handle exceptions
-						panic(err)
-					}
-
-					repos = struct{ Data Repos }{}
-
-					json.Unmarshal(repoListResp.GetHttpContentBytes(), &repos)
-					for _, repo := range repos.Data.Repos {
-
-						reposGauge.With(prometheus.Labels{
-							// "downloads": repo.Downloads,
-							// "gmtCreate": repo.GmtCreate,
-							// "gmtModified": repo.GmtModified,
-							// "logo": repo.Logo,
-							"regionId":          repo.RegionId,
-							"repoAuthorizeType": repo.RepoAuthorizeType,
-							"repoBuildType":     repo.RepoBuildType,
-							// "repoDomainList": repo.RepoDomainList,
-							"repoId":        strconv.FormatInt(repo.RepoId, 10),
-							"repoName":      repo.RepoName,
-							"repoNamespace": repo.RepoNamespace,
-							// "repoOriginType": repo.RepoOriginType,
-							"repoStatus": repo.RepoStatus,
-							"repoType":   repo.RepoType,
-							// "stars": repo.Stars,
-							"summary": repo.Summary,
-						})
-					}
-
-				}
-			}(namespace)
-
-		}
-
-	}
+	// }
 
 	// serve metrics
 	http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(":9101", nil))
+}
+
+type MetricMap map[string]*prometheus.Desc
+
+type AliyunExporter struct {
+	instance   string
+	ac         *aliyun.AliyunClientMutex
+	metric_map MetricMap
+	// mu         sync.Mutex
+}
+
+func NewAliyunExporter() AliyunExporter {
+
+	ac := aliyun.NewAliyunClientMutex()
+	ae := AliyunExporter{
+
+		ac: &ac,
+
+		metric_map: MetricMap{
+			"aliyun_acr_namespace_info": prometheus.NewDesc("aliyun_acr_namespace_info", "Aliyun ACR Namespace",
+				[]string{"namespaceStatus", "namespace", "authorizeType"}, nil),
+		},
+	}
+
+	ae.metric_map.initRepoDisc()
+	ae.metric_map.initBuildDisc()
+
+	return ae
+
+}
+
+//implement Collector
+func (exporter *AliyunExporter) Describe(ch chan<- *prometheus.Desc) {
+	for _, desc := range exporter.metric_map {
+		ch <- desc
+	}
+
+}
+
+//implement Collector
+func (exporter *AliyunExporter) Collect(prom_ch chan<- prometheus.Metric) {
+	// exporter.mu.Lock()
+	// defer exporter.mu.Unlock()
+
+	namespaces := exporter.ac.NamespacesList()
+
+	multi_chan := map[string]chan aliyun.Repo{}
+	for _, namespace := range namespaces {
+
+		prom_ch <- prometheus.MustNewConstMetric(exporter.metric_map["aliyun_acr_namespace_info"], prometheus.GaugeValue, 1,
+			namespace.Namespace, namespace.NamespaceStatus, namespace.AuthorizeType)
+
+		multi_chan[namespace.Namespace] = make(chan aliyun.Repo, 100)
+
+		go func(namespace aliyun.Namespace) {
+			exporter.ac.ReposList(namespace, multi_chan[namespace.Namespace])
+		}(namespace)
+
+		for repo := range multi_chan[namespace.Namespace] {
+			if repo.RepoBuildType == "AUTO_BUILD" {
+
+				build := exporter.ac.GetLastestBuilds(namespace.Namespace, repo.RepoName)
+				exporter.metric_map.collectBuildMetric(prom_ch, build)
+
+			}
+
+			exporter.metric_map.collectRepoMetric(prom_ch, repo)
+		}
+	}
 }

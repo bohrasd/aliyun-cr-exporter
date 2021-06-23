@@ -32,11 +32,12 @@ spec:
     spec:
       containers:
         - name: aliyun-cr-exporter
-          image: "registry.cn-hangzhou.aliyuncs.com/doji-public/aliyun-cr-exporter:0.1.0"
+          image: "docker.io/bohrasd/aliyun-cr-exporter:0.1.0"
           env:
             - name: ALIYUN_REGION
               value: cn-hangzhou # change to your region
             - name: ALIYUN_AK
+              valueFrom:
                 secretKeyRef:
                   name: aliyun-cr-secret
                   key: ALIYUN_AK

@@ -86,9 +86,9 @@ func NewAliyunExporter() AliyunExporter {
 			data.namespaces[namespace.Namespace] = namespace
 			multi_chan[namespace.Namespace] = make(chan aliyun.Repo, 100)
 
-			go func() {
+			go func(namespace aliyun.Namespace) {
 				ac.ReposList(namespace, multi_chan[namespace.Namespace])
-			}()
+			}(namespace)
 
 			for repo := range multi_chan[namespace.Namespace] {
 				data.repos[repo.RepoId] = repo

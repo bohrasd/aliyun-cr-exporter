@@ -34,7 +34,6 @@ Configuration
 
 TODO
 ----
-+ Collect cache
 + ACR EE support
 + Multi tenent exporting
 + More metrics
